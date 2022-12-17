@@ -1,6 +1,6 @@
 # import pygame as py
 import time
-from flappy.bird import Bird
+from bird import Bird
 from pipe import Pipe
 import random
 from config import *
@@ -276,6 +276,7 @@ py.init( )
 if __name__ == '__main__':
     # PYGAME FRAME WINDOW
     py.display.set_caption("Flappy Bird V2")
+    py.display.set_icon(icon)
     screen = py.display.set_mode((FrameWidth, FrameHeight))
 
     t = time.time()

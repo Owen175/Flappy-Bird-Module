@@ -13,7 +13,7 @@ py.display.set_caption("Loading....")
 screen = py.display.set_mode((1, 1))
 
 # Loading sounds and images
-tn = py.image.load('sprites/black.png').convert()
+icon = py.image.load('sprites/redbird-midflap.png')
 pipetop = py.image.load('sprites/pipetop.png').convert()
 pipebottom = py.image.load('sprites/pipebottom.png').convert()
 bg = py.image.load('sprites/background-night.png').convert()

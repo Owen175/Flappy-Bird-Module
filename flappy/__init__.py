@@ -1,2 +1,0 @@
-import flappy_bird_module
-import config

@@ -1,9 +1,11 @@
+# import pygame as py
 import time
-from flappy.bird import Bird
+from birdWithAI import Bird
 from pipe import Pipe
 import random
 from config import *
-
+import neat
+import os
 
 class Game:
     def __init__(self, bgScroll, bseScroll, highScore, AllTimeHS, pipeInterval, pointWhenPassed, startPos, numBirds):
@@ -157,93 +159,102 @@ class Game:
         for i, dg in enumerate(digitList):
             screen.blit(dg, (scoreDist * i + coords[0], coords[1]))
 
+    def train_ai(self, genome1, config):
+        net = neat.nn.FeedForwardNetwork.create(genome1, config)
+        output = net.activate(self.birdList[0].velocity, self.birdList[0].vertDistance1, self.birdList[0].vertDistance2, self.birdList[0].horDist)
+
+        if self.cont():
+            bdList = self.runGame()
+        eval = bdList[0].lifeDuration
 
 
-    def run(self, highScore, AllTimeHS):
-        while self.cont():
-            self.checkKeys()
-            self.lastTime = self.t
-            self.t = time.time()
-            self.deltaTime = self.t - self.lastTime - self.skipTime
-            for i in range(len(self.birdList)):
-                self.birdList[i].anTime -= self.deltaTime * self.anSpeed
-            self.cumulativeSkipTime += self.skipTime
-            for id, bird in enumerate(self.birdList):
-                if bird.anTime > 0.5:
-                    self.birdList[id].anFrame = an1
-                elif bird.anTime > 0:
-                    self.birdList[id].anFrame = an2
-                elif bird.anTime > -0.5:
-                    self.birdList[id].anFrame = an1
-                else:
-                    self.birdList[id].anFrame = bd
-
-            self.scrollIm(bg, self.bgScroll, 0, tiles)
-
-            self.pipeScroll = -self.speed * self.deltaTime
-            self.bgScroll -= self.speed * self.deltaTime  # keeps the movement speed constant despite FPS changes
-            self.bseScroll -= self.speed * self.deltaTime
-            if abs(self.bgScroll) > bg.get_width():
-                self.bgScroll = 0
-            if abs(self.bseScroll) > bse.get_width():
-                self.bseScroll = 0
-            if regularPipeIntervals:
-                if self.pipeTime + self.cumulativeSkipTime + minPipeInterval < time.time():
-                    self.pipeTime = self.t
-                    self.newPipe()
+    def runGame(self):
+        self.checkKeys()
+        self.lastTime = self.t
+        self.t = time.time()
+        self.deltaTime = self.t - self.lastTime - self.skipTime
+        for i in range(len(self.birdList)):
+            self.birdList[i].anTime -= self.deltaTime * self.anSpeed
+        self.cumulativeSkipTime += self.skipTime
+        for id, bird in enumerate(self.birdList):
+            if bird.anTime > 0.5:
+                self.birdList[id].anFrame = an1
+            elif bird.anTime > 0:
+                self.birdList[id].anFrame = an2
+            elif bird.anTime > -0.5:
+                self.birdList[id].anFrame = an1
             else:
-                if time.time() > self.pipeInterval + self.cumulativeSkipTime + self.pipeTime:
-                    self.newPipe()
-                    self.pipeTime = time.time()
-                    self.pipeInterval = minPipeInterval / max(math.sqrt(random.random()), 0.5)
+                self.birdList[id].anFrame = bd
 
-            self.shiftPipe(self.pipeScroll)
-            self.removeOffScreen()
-            for p in self.pipeList:
-                self.drawPipe(p)
-            self.birdPosList = []
-            for i in range(len(self.birdList)):
-                pos = self.birdList[i].frameChange(self.deltaTime * timeMultiplier)
-                self.birdPosList.append((pos[0],FrameHeight-pos[1]))
-                if self.birdList[i].dead:
-                    self.birdPosList[i] = (-100, 0)
-                self.birdPosSet(self.birdPosList[i], self.birdList[i].anFrame)
-            pipePairs = []
-            for i, p in enumerate(self.pipeList):
-                if i % 2 == 0:
-                    pipePairs.append([p])
-                else:
-                    pipePairs[(i - 1) // 2].append(p)
+        self.scrollIm(bg, self.bgScroll, 0, tiles)
 
-            for pair in pipePairs:
-                for id, bird in enumerate(self.birdList):
-                    additionToScore = pair[0].checkForScore(bird.pos[0], pointWhenPassed)
-                    self.intScore += additionToScore
-                    if additionToScore == 1 and soundOnPoint:
-                        py.mixer.Sound.play(point)
+        self.pipeScroll = -self.speed * self.deltaTime
+        self.bgScroll -= self.speed * self.deltaTime  # keeps the movement speed constant despite FPS changes
+        self.bseScroll -= self.speed * self.deltaTime
+        if abs(self.bgScroll) > bg.get_width():
+            self.bgScroll = 0
+        if abs(self.bseScroll) > bse.get_width():
+            self.bseScroll = 0
+        if regularPipeIntervals:
+            if self.pipeTime + self.cumulativeSkipTime + minPipeInterval < time.time():
+                self.pipeTime = self.t
+                self.newPipe()
+        else:
+            if time.time() > self.pipeInterval + self.cumulativeSkipTime + self.pipeTime:
+                self.newPipe()
+                self.pipeTime = time.time()
+                self.pipeInterval = minPipeInterval / max(math.sqrt(random.random()), 0.5)
 
-                p1y = pair[0].pipeTop + pipetop.get_height()
-                p2y = pair[1].pipeTop
+        self.shiftPipe(self.pipeScroll)
+        self.removeOffScreen()
+        for p in self.pipeList:
+            self.drawPipe(p)
+        self.birdPosList = []
+        for i in range(len(self.birdList)):
+            pos = self.birdList[i].frameChange(self.deltaTime * timeMultiplier)
+            self.birdPosList.append((pos[0],FrameHeight-pos[1]))
+            if self.birdList[i].dead:
+                self.birdPosList[i] = (-100, 0)
+            self.birdPosSet(self.birdPosList[i], self.birdList[i].anFrame)
+        pipePairs = []
+        for i, p in enumerate(self.pipeList):
+            if i % 2 == 0:
+                pipePairs.append([p])
+            else:
+                pipePairs[(i - 1) // 2].append(p)
 
-                for id, bird in enumerate(self.birdList):
-                    for row in [bird.shape[0], bird.shape[2], bird.shape[4], bird.shape[6], bird.shape[12], bird.shape[14],
-                                bird.shape[16], bird.shape[20], bird.shape[23]]:
-                        start = row[0]
-                        start = [start[0] + bird.pos[0], start[1] + FrameHeight - bird.pos[1]]
+        for pair in pipePairs:
+            for id, bird in enumerate(self.birdList):
+                additionToScore = pair[0].checkForScore(bird.pos[0], pointWhenPassed)
+                self.intScore += additionToScore
+                if additionToScore == 1 and soundOnPoint:
+                    py.mixer.Sound.play(point)
 
-                        flapRealPosy = start[1]  # FrameHeight-start[1]
-                        if not (p1y < flapRealPosy < p2y):
-                            end = row[1]
-                            end = end[0] + bird.pos[0]
+            p1y = pair[0].pipeTop + pipetop.get_height()
+            p2y = pair[1].pipeTop
 
-                            if end > pair[0].pipeStartPos and start[0] < pair[0].pipeEndPos:
-                                self.birdList[id].dead = True
+            for id, bird in enumerate(self.birdList):
+                for row in [bird.shape[0], bird.shape[2], bird.shape[4], bird.shape[6], bird.shape[12], bird.shape[14],
+                            bird.shape[16], bird.shape[20], bird.shape[23]]:
+                    start = row[0]
+                    start = [start[0] + bird.pos[0], start[1] + FrameHeight - bird.pos[1]]
 
-            self.scrollIm(bse, self.bseScroll, FrameHeight - bse.get_height(), tilesBse)
-            self.displayScore()
-            clock.tick(FPS)  # Limits the FPS to the num
-            py.display.update()
-            skipTime = 0
+                    flapRealPosy = start[1]  # FrameHeight-start[1]
+                    self.birdList[id].vertDistance1 = p1y - flapRealPosy
+                    self.birdList[id].vertDistance2 = p2y - flapRealPosy
+                    self.birdList[id].horDist = pair[0].pipeStartPos - self.birdList[id].pos[0]
+                    if not (p1y < flapRealPosy < p2y):
+                        end = row[1]
+                        end = end[0] + bird.pos[0]
+
+                        if end > pair[0].pipeStartPos and start[0] < pair[0].pipeEndPos:
+                            self.birdList[id].dead = True
+
+        self.scrollIm(bse, self.bseScroll, FrameHeight - bse.get_height(), tilesBse)
+        self.displayScore()
+        clock.tick(FPS)  # Limits the FPS to the num
+        py.display.update()
+        skipTime = 0
 
         screen.blit(gm_over, (FrameWidth // 2 - gm_over.get_width() // 2, FrameHeight // 2 - gm_over.get_height() // 2))
         py.mixer.Sound.play(die)
@@ -256,25 +267,38 @@ class Game:
             AllTimeHS = self.highScore
             print(f'Congratulations, you beat the all time high score. It is now {highScore}')
         print(f'Current Session High score is {highScore}')
-        while True:
-            py.display.update()
-            for event in py.event.get():
-                if event.type == py.QUIT:
-                    print(f'Session High Score was {highScore}')
-                    quit()
-                if event.type == py.KEYDOWN:
-                    if event.key == py.K_r:
-                        return highScore, AllTimeHS
-                    if event.key == py.K_q:
-                        print(f'Session High Score was {highScore}')
-                        quit()
+
+        return self.birdList
 
 
+def eval_genomes(genomes, config):
+    screen = py.display.set_mode((FrameWidth, FrameHeight))
+
+    for i, (genome_id, genome) in enumerate(genomes):
+        game1 = Game(bgScroll, bseScroll, highScore, AllTimeHS, pipeInterval, pointWhenPassed, startPos, 1)
+        game1.train_ai(genome, config)
+
+def runNeat(config):
+    p = neat.Population(config)
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+    p.add_reporter(neat.Checkpointer(1))
+    #To load from a checkpoint, comment out 'p.add_reporter(stats)' and replace p=neat.Population(config) with p= neat.Checkpointer.restore_checkpoint('neat-checkpoint-{checkpointNum}')
+    best = p.run(eval_genomes, 100)
 
 py.init( )
 if __name__ == '__main__':
     # PYGAME FRAME WINDOW
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, 'AIconfig.txt')
+    config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
+                              neat.DefaultStagnation, config_path)
+
+    runNeat(config)
+
     py.display.set_caption("Flappy Bird V2")
+    py.display.set_icon(icon)
     screen = py.display.set_mode((FrameWidth, FrameHeight))
 
     t = time.time()
@@ -283,7 +307,8 @@ if __name__ == '__main__':
     if toggleMusic:
         py.mixer.music.play(-1)  # Repeats
 
-    while True:
-        game1 = Game(bgScroll, bseScroll, highScore, AllTimeHS, pipeInterval, pointWhenPassed, startPos, 1)
-        print('Press Space to play.')
-        highScore, AllTimeHS = game1.run(highScore, AllTimeHS)
+
+    game1 = Game(bgScroll, bseScroll, highScore, AllTimeHS, pipeInterval, pointWhenPassed, startPos, 1)
+    print('Press Space to play.')
+    highScore, AllTimeHS, bdList = game1.run(highScore, AllTimeHS)
+

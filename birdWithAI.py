@@ -1,0 +1,55 @@
+import time
+class Bird:
+    def __init__(self, image, gravity, pos, mass, initVeloc=0, an1=None, an2=None):
+        self.image = image
+        self.an1 = an1
+        self.an2 = an2
+        self.gravity = gravity
+        self.creationTime = time.time()
+        self.endTime = 0
+        self.pos = pos
+        self.velocity = initVeloc
+        self.mass = mass
+        self.gpe = self.gravity * self.mass * self.pos[1]
+        self.height = self.image.get_height()
+        self.width = self.image.get_width()
+        self.anTime = -1
+        self.lifeDuration = 0
+        self.vertDistance1 = 0
+        self.vertDistance2 = 0
+        self.horDist = 0
+        self.dead = False
+        self.shape = []
+        self.anFrame = image
+        for y in range(self.height):
+            startPos = 0
+            endPos = 0
+            for x in range(self.width):
+                R, G, B, _ = self.image.get_at((x,y))
+                if R == 0 and G == 0 and B == 0:
+                    if endPos == 0:
+                        endPos = x
+                else:
+                    if startPos == 0:
+                        startPos = x
+                    endPos = 0
+            self.shape.append([[startPos, self.height-y], [endPos, self.height-y]])
+
+    def frameChange(self, dt):
+        if self.dead:
+            dt = 0
+            if self.endTime == 0:
+                self.endTime = time.time()
+                self.lifeDuration = self.creationTime - self.endTime
+        grav_force = -self.mass * self.gravity
+
+        self.velocity = self.velocity + grav_force/self.mass * dt
+
+        self.pos = (self.pos[0], self.pos[1] + self.velocity * dt)
+
+        return self.pos
+
+    def flap(self):
+        self.velocity = 120
+
+#Vertical distance to the top and bottom pipes, velocity, distance to next pipe set.
