@@ -52,8 +52,11 @@ pointWhenPassed = False
 toggleSFX = False
 toggleMusic = False
 soundOnPoint = False
+wingSounds = True
 regularPipeIntervals = False  # False means that the intervals are randomised,
                               # however, there is a minimum to make it possible
+AIMode = True
+
 
 minPipeInterval = 1  # Seconds. Could be 2 if regularPipeIntervals is true.
 speed = 120  # How fast the bird moves
@@ -65,6 +68,11 @@ anSpeed = 6  # Changes the animation speed
 if toggleSFX:
     toggleMusic = True
     soundOnPoint = True
+if AIMode:
+    toggleMusic = False
+    soundOnPoint = False
+    wingSounds = False
+
 clock = py.time.Clock()
 highScore = 0
 pipeInterval = minPipeInterval

@@ -1,6 +1,6 @@
 # import pygame as py
 import time
-from bird import Bird
+from flappy.bird import Bird
 from pipe import Pipe
 import random
 from config import *

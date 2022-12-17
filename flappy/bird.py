@@ -10,8 +10,10 @@ class Bird:
         self.gpe = self.gravity * self.mass * self.pos[1]
         self.height = self.image.get_height()
         self.width = self.image.get_width()
-
+        self.anTime = -1
+        self.dead = False
         self.shape = []
+        self.anFrame = image
         for y in range(self.height):
             startPos = 0
             endPos = 0
@@ -27,6 +29,8 @@ class Bird:
             self.shape.append([[startPos, self.height-y], [endPos, self.height-y]])
 
     def frameChange(self, dt):
+        if self.dead:
+            dt = 0
         grav_force = -self.mass * self.gravity
 
         self.velocity = self.velocity + grav_force/self.mass * dt
